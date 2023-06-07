@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo " Beginning hardware report. . . "
+
+#!/bin/bash
+
+echo "System Information:"
+uname -a
+
+echo "CPU Information:"
+lscpu
+
+echo "Memory Information:"
+free -h
+
+echo "Disk Information:"
+df -h
+
+echo "Network Interfaces:"
+ip addr
+
+echo "PCI Devices Information:"
+lspci | grep -n Intel
+
