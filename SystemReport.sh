@@ -6,9 +6,9 @@ System Info
 ------------
 EOF
 # Comments:
-# L 11 grep filter for "=", head -1 gets first line from the "=", awk -F grabs what is after the "=" and tr -d removes quotations
+# L 17 grep filter for "=", head -1 gets first line from the "=", awk -F grabs what is after the "=" and tr -d removes quotations
 # L 23 similar idea, added sort on uniques
-# L 25 -F 'Gi' splits line, then {print $1 FS} statement makes awk print the memory usage value
+# L 25 awk -F 'Gi' splits line, then {print $1 FS} statement makes awk print the memory
 # L 33 uses -I and filters the output to get first IP address using awk '{print $1}'
 # L 35 excludes loopback from showing, shows 'ens' using grep, and cuts out what we dont need 
 # L 42 wc -l counts lines in the output to show process count.
@@ -44,5 +44,7 @@ Load Averages: $(uptime | awk -F'average: ' '{print $2}')
 Memory Allocation: $(free -h | awk '/Mem/ {print $3 "/" $2}')
 Listening Network Port: $(netstat -tuln | grep 'LISTEN')
 UFW Rules: $(sudo ufw status)
+
 EOF
 # L 45 -t, finds TCP connections should be displayed. -u: find UDP connections should be displayed -l: Limits the output. -n: IP addresses
+
