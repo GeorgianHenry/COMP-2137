@@ -19,10 +19,10 @@ Uptime: $(uptime -p)
 
 Hardware Information
 ------------
-CPU: $(lscpu | grep "Model name" | awk -F 'CPU' '{print $1 FS}')
+CPU: $(lscpu | grep "name" | awk -F ":" '{print $2 FS}')
 SPEED: $(sudo lshw -class processor | grep size | awk '{print $2}'| sort -u)
 MAX SPEED: $(lscpu | grep "CPU max MHz" | awk '{print $4}')
-RAM: $(free -ht |  grep "Mem:" | awk -F 'Gi' '{print $1 FS}')
+RAM: $(free -ht |  grep "Mem" | awk -F 'Gi' '{print $1 FS}')
 Disk: $(lsblk --nodeps --noheadings -o NAME,MODEL,SIZE | grep -v "loop")
 Video: $(lspci | grep "VGA compatible controller" | awk -F ': ' '{print $2}')
 
