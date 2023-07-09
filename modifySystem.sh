@@ -87,11 +87,6 @@ network:
 
 EOF
 
-echo "Network configuration updated."
-# Apply network config, another reason we needed sudo
-printOutput "Applying network configuration"
-sudo netplan apply
-
 # Install required software
 printOutput "Installing required software"
 if ! checkForPackage "openssh-server"; then
@@ -201,6 +196,13 @@ if ! grep -q "^dennis" /etc/sudoers; then
         exit 1
     fi
 fi
+
+
+echo "Network configuration updated."
+# Apply network config, another reason we needed sudo
+printOutput "Applying network configuration"
+sudo netplan apply
+
 
 printOutput "System configuration completed successfully."
 
