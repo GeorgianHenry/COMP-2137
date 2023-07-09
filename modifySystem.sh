@@ -39,9 +39,7 @@ function update_config_file() {
         cp "$config_file.bak" "$config_file"  # Restore original file
         return 1
     fi
-
-    netplan apply  # Apply the network configuration changes
-
+    
     return 0
 }
 
@@ -66,6 +64,10 @@ if [ $? -ne 0 ]; then
     printIfError "Failed to update network configuration."
     exit 1
 fi
+
+# Apply network config
+printOutput "Applying network configuration"
+netplan apply
 
 # Install required software
 printOutput "Installing required software"
