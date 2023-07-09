@@ -55,19 +55,42 @@ if [ "$currentHostname" != "$newHostname" ]; then
     fi
 fi
 
-# Update network configuration
-printOutput "Updating network configuration"
-network_config_file="/etc/netplan/01-network-manager-all.yaml"
-network_config_changes='s/address:.*/address: 192.168.16.21\/24/; s/gateway:.*/gateway: 192.168.16.1/; s/nameservers:.*/nameservers: [192.168.16.1]/; s/search:.*/search: [home.arpa, localdomain]/'
-update_config_file "$network_config_file" "$network_config_changes"
-if [ $? -ne 0 ]; then
-    printIfError "Failed to update network configuration."
-    exit 1
-fi
+# Network Config
 
-# Apply network config
+# Creates a backup
+cp /etc/netplan/01-network-manager-all.yaml /etc/netplan/01-network-manager-all.yaml.bk_$(date +%Y%m%d%H%M)
+
+# Define network configuration variables. Ensure you make a backup of code and server environment before changing this script!
+staticip="192.168.16.21/24"
+gatewayip="192.168.16.1"
+nameserversip="[192.168.16.1]"
+
+# Update network configuration
+cat > /etc/netplan/01-network-manager-all.yaml <<EOF
+network:
+  version: 2
+  renderer: NetworkManager
+  ethernets:
+    ens33:
+      dhcp4: false
+      addresses:
+        - $staticip
+      routes:
+        - to: 0.0.0.0/0
+          via: $gatewayip
+      nameservers:
+        addresses: $nameserversip
+    eth0:
+      dhcp4: true
+    ens34:
+      dhcp4: true
+
+EOF
+
+echo "Network configuration updated."
+# Apply network config, another reason we needed sudo
 printOutput "Applying network configuration"
-netplan apply
+sudo netplan apply
 
 # Install required software
 printOutput "Installing required software"
