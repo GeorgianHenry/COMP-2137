@@ -1,24 +1,25 @@
 #!/bin/bash
 
 # Check if the script is being run with sudo/root
-if [[ $(id -u) -ne 0 ]]; then
+if [[ $(id -u) -ne 0 ]]; then # check user ID with id -u, if 0 its not in	 root privileges.
     echo "Sorry, but since this script changes system configuration, it must be run using sudo."
     exit 1
 fi
 
-# Function to output for users w/ a label
-function printOutput() {
-    echo -e "\n[$(date +"%Y-%m-%d %H:%M:%S")] $1"
-}
 
-# Function to display error messages
-function printIfError() {
-    echo -e "\n[$(date +"%Y-%m-%d %H:%M:%S")] [ERROR] $1"
-}
-
-# Function to check if a package is installed
+# Check if a package is installed function
 function checkForPackage() {
-    dpkg -s "$1" >/dev/null 2>&1
+    dpkg -s "$1" >/dev/null 2>&1 #  2>&1 will ensure no output or error messages are displayed on terminal
+}
+
+# Print messages function
+function printOutput() {
+    echo -e "\n[$(date +"%Y-%m-%d %H:%M:%S")] $1" # prints the timestamp and the first parameter with -e
+}
+
+# Print error messages function
+function printIfError() {
+    echo -e "\n[$(date +"%Y-%m-%d %H:%M:%S")] [ERROR] $1" # same as above but includes ERROR indication
 }
 
 # Function to check if a service is running
@@ -26,38 +27,38 @@ function is_service_running() {
     systemctl is-active --quiet "$1"
 }
 
-# Function to update configuration file and check for success
+# Update config file and check if succeeded
 function update_config_file() {
     local config_file="$1"
     local config_changes="$2"
 
-    cp "$config_file" "$config_file.bak"
-    sed -i "$config_changes" "$config_file"
-
-    if [ $? -ne 0 ]; then
-        printIfError "Failed to update $config_file."
-        cp "$config_file.bak" "$config_file"  # Restore original file
-        return 1
-    fi
+    cp "$config_file" "$config_file.bak"    # .bak is for backups, use copy command
+    sed -i "$config_changes" "$config_file" # update the config file using sed
     
-    return 0
+    if [ $? -ne 0 ]; then 
+        printIfError "Failed to update $config_file."
+        cp "$config_file.bak" "$config_file" # applies the .bak file
+        return 1 # an error occurred during the execution of the function
+    fi 
+    
+    return 0 # the function executed without any errors
 }
 
 # Update hostname
-newHostname="autosrv"
-currentHostname=$(hostname)
-if [ "$currentHostname" != "$newHostname" ]; then
-    printOutput "Changing hostname to $newHostname"
+newHostname="autosrv" # add the new hostname here
+currentHostname=$(hostname) # add the current hostname to a variable
+if [ "$currentHostname" != "$newHostname" ]; then # if statement for redundancy, why change it if its already changed
+    printOutput "Changing hostname to $newHostname" # print what is going here 
     hostnamectl set-hostname "$newHostname"
     if [ $? -ne 0 ]; then
         printIfError "Failed to change hostname."
-        exit 1
+        exit 1 # used to terminate script and give the exit status of 1 (an error) 
     fi
 fi
 
 # Network Config
 
-# Creates a backup
+# Creates a date and backup
 cp /etc/netplan/01-network-manager-all.yaml /etc/netplan/01-network-manager-all.yaml.bk_$(date +%Y%m%d%H%M)
 
 # Define network configuration variables. Ensure you make a backup of code and server environment before changing this script!
@@ -65,7 +66,8 @@ staticip="192.168.16.21/24"
 gatewayip="192.168.16.1"
 nameserversip="[192.168.16.1]"
 
-# Update network configuration
+# Update network configuration . . . logic is to access the .yaml, rewrite it, then apply later.
+# netplan is case sensitive spaces matter. thus, the variables above offer easy configuration. 
 cat > /etc/netplan/01-network-manager-all.yaml <<EOF
 network:
   version: 2
@@ -86,28 +88,28 @@ network:
       dhcp4: true
 
 EOF
-
+# one oversight, what if the interface names aren't ens33, ens34, eth0, they will remain default then.
 # Install required software
 printOutput "Installing required software"
-if ! checkForPackage "openssh-server"; then
-    apt-get install -y openssh-server
+if ! checkForPackage "openssh-server"; then # Will check if the openssh is already installed
+    apt-get install -y openssh-server >/dev/null # Installs openssh server, puts useless output to null
     if [ $? -ne 0 ]; then
-        printIfError "Failed to install openssh-server."
+        printIfError "Failed to install openssh-server. Likely a network issue has been detected, try restarting and check connectivity."
         exit 1
     fi
 fi
 
 if ! checkForPackage "apache2"; then
-    apt-get install -y apache2
+    apt-get install -y apache2 >/dev/null # Required software, same idea as before.
     printOutput "Installing Apache2."
-    if [ $? -ne 0 ]; then
-        printIfError "Failed to install Apache2."
+    if [ $? -ne 0 ]; then # checks the exit status of the apt-get install command, if anything goes wrong it will take this condition
+        printIfError "Failed to install Apache2. Reapply the configuration if you lost connection suddenly." # the prints error
         exit 1
     fi
 fi
 
 if ! checkForPackage "squid"; then
-    apt-get install -y squid
+    apt-get install -y squid >/dev/null
     if [ $? -ne 0 ]; then
         printIfError "Failed to install Squid."
         exit 1
@@ -166,20 +168,20 @@ for user in "${user_accounts[@]}"; do
     ssh_dir="/home/$user/.ssh"
     authorized_keys_file="$ssh_dir/authorized_keys"
 
-    if [ ! -d "$ssh_dir" ]; then
-        mkdir "$ssh_dir"
-        chmod 700 "$ssh_dir" #  700 removes all permissions for group, but keeps rwx for user
-        chown "$user:$user" "$ssh_dir"
+    if [ -d "$ssh_dir" ]; then
+        rm -rf "$ssh_dir" # Remove the existing .ssh directory
     fi
 
-    if [ ! -f "$authorized_keys_file" ]; then
-        touch "$authorized_keys_file"
-        chmod 600 "$authorized_keys_file" # 600 owner has full read and write access to the file, while no other user can access the file
-        chown "$user:$user" "$authorized_keys_file"
-    fi
+    mkdir "$ssh_dir"
+    chmod 700 "$ssh_dir"
+    chown "$user:$user" "$ssh_dir"
 
-    ssh-keygen -t rsa -f "$ssh_dir/id_rsa" -N ""
-    ssh-keygen -t ed25519 -f "$ssh_dir/id_ed25519" -N ""
+    touch "$authorized_keys_file"
+    chmod 600 "$authorized_keys_file"
+    chown "$user:$user" "$authorized_keys_file"
+
+    ssh-keygen -t rsa -f "$ssh_dir/id_rsa" -N "" >/dev/null
+    ssh-keygen -t ed25519 -f "$ssh_dir/id_ed25519" -N "" >/dev/null
 
     cat "$ssh_dir/id_rsa.pub" >> "$authorized_keys_file"
     cat "$ssh_dir/id_ed25519.pub" >> "$authorized_keys_file"
@@ -202,7 +204,6 @@ echo "Network configuration updated."
 # Apply network config, another reason we needed sudo
 printOutput "Applying network configuration"
 sudo netplan apply
-
 
 printOutput "System configuration completed successfully."
 
