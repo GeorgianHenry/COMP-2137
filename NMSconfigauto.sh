@@ -30,8 +30,8 @@ configureHost() {
     local newIP="$3"
 
     # SSH into the target system. --KeyCheck false so no inputs required  
-    if ssh -o StrictHostKeyChecking= no "$target" << EOF
-        echo "Configuring $newHostname" # Outputs for user, cannot use printOutput in this case since we are "in" a target
+    if ssh -o StrictHostKeyChecking=no "$target" << EOF
+        echo "Configuring $newHostname" # Outputs for user, cannot use printOutput in this case since we are in a target
         
         # Update package information and redirect quietly
         sudo apt-get update > /dev/null
